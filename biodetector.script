@@ -332,12 +332,41 @@ function update(delta)
 			end
 			biomap:SetHeading(angle) -- поворачиваем локатор
 		end
-
-		counter = 1
-		for id,obj in pairs(db.creatures) do
+        local tabl_dead={}
+	    local tabl_alive={}
+        acounter = 0
+        dcounter = 0
+        for id,obj in pairs(db.creatures) do
 			clsid = obj:clsid()
 			objPos = obj:position()
-			if objPos:distance_to_xz(actorPos) <= max_dist and (iAmStalker[clsid] or iAmMonster[clsid]) then
+            dist = objPos:distance_to_xz(actorPos)
+			if dist <= max_dist then
+                if (iAmStalker[clsid] or iAmMonster[clsid]) then
+                    if obj:alive() then  
+                        acounter = acounter+1
+                        table.insert(tabl_alive,{dist,obj,objPos}) 
+                    else  
+                        dcounter = dcounter+1
+                        table.insert(tabl_dead,{dist,obj,objPos}) 
+                    end
+                end
+            end
+        end
+        if (max_count > acounter) then 
+			table.sort(tabl_dead,function(i1,i2) return i1[1] < i2[1] end) 
+            local cnt=max_count-acounter
+			for _,dot in pairs(tabl_dead) do 
+                if (cnt <= 0) then break end
+                cnt=cnt-1
+				table.insert(tabl_alive,1,dot) -- insert in head
+			end
+		end
+		if (max_count < acounter) then table.sort(tabl_alive,function(i1,i2) return i1[1] < i2[1] end) end
+
+		counter = 1
+        for _,dot in pairs(tabl_alive) do
+			obj=dot[2]
+			objPos=dot[3]
 				-- определяем цвет
 				color = getColor(obj)
 				if color then -- есть цвет - рисуем
@@ -384,7 +413,7 @@ function update(delta)
 						break
 					end
 				end
-			end
+			
 		end
 		if counter<=max_count then
 			-- зачистка неактуальных точек
